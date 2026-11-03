@@ -261,39 +261,6 @@ public:
         });
     }
 
-    // Sparse regions (nx2:gpu 214 with the sparse flag): the GPU range reaches device memory of its
-    // own from the start, and each block gets memory when the GPU first writes it (BackSparse).
-    // The GPU mapping never changes, so the texture cache doesn't rebuild the images over it as
-    // blocks get memory; unbacked blocks read zero.
-    void CreateSparse(u64 gpu_address, u64 size) {
-        std::scoped_lock lk{mutex};
-        sparse_regions[gpu_address] = size;
-        for (auto& [owner, listener] : listeners) {
-            if (listener.sparse) {
-                listener.sparse(gpu_address, size, true);
-            }
-        }
-    }
-
-    void DestroySparse(u64 gpu_address, u64 size) {
-        std::scoped_lock lk{mutex};
-        sparse_regions.erase(gpu_address);
-        for (auto& [owner, listener] : listeners) {
-            if (listener.sparse) {
-                listener.sparse(gpu_address, size, false);
-            }
-        }
-    }
-
-    void BackSparse(u64 gpu_address, u64 cpu_address, u64 size) {
-        std::scoped_lock lk{mutex};
-        for (auto& [owner, listener] : listeners) {
-            if (listener.back) {
-                listener.back(gpu_address, cpu_address, size);
-            }
-        }
-    }
-
     void AddListener(const void* owner, Listener listener, UnmapListener unmap_listener,
                      ReleaseListener release_listener = {}, SparseListener sparse_listener = {},
                      BackListener back_listener = {}, ReserveListener reserve_listener = {},
