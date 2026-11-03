@@ -11,6 +11,10 @@
 #include "core/arm/dynarmic/dynarmic_exclusive_monitor.h"
 #include "core/core.h"
 #include "core/hle/kernel/k_process.h"
+#ifdef HAS_HYPERVISOR
+#include "core/arm/hypervisor/arm_hypervisor.h"
+#include "core/arm/hypervisor/hv_vm.h"
+#endif
 #include "core/hle/kernel/k_scoped_resource_reservation.h"
 #include "core/hle/kernel/k_shared_memory.h"
 #include "core/hle/kernel/k_shared_memory_info.h"
@@ -1255,7 +1259,8 @@ Result KProcess::LoadFromMetadata(KernelCore& kernel, const FileSys::ProgramMeta
     static_assert(sizeof(params.name) <= sizeof(name));
     std::memcpy(params.name.data(), name.data(), sizeof(params.name));
 
-    // Initialize for application process.
+    // Initialize for application process. Switch 2 needs its flag first: the page table sizes
+    // the heap region from it.
     m_is_switch2 = metadata.IsSwitch2();
     R_TRY(this->Initialize(kernel, params, metadata.GetKernelCapabilities(), res_limit, pool, aslr_space_start));
 
@@ -1306,6 +1311,20 @@ void KProcess::LoadModule(KernelCore& kernel, CodeSet code_set, KProcessAddress 
 void KProcess::InitializeInterfaces(KernelCore& kernel) {
     m_exclusive_monitor =
         Core::MakeExclusiveMonitor(this->GetMemory(), Core::Hardware::NUM_CPU_CORES);
+
+#ifdef HAS_HYPERVISOR
+    // EDEN_NX2_HYPERVISOR=1: run the application natively when its VM is ready (Core::Memory
+    // attached it to this page table at initialization).
+    if (this->IsApplication() && this->Is64Bit() && kernel.IsMulticore() &&
+        Core::Hv::Vm::Get().IsAttached(this->GetPageTable().GetImpl()) &&
+        Core::Hv::Vm::Get().IsReady()) {
+        for (size_t i = 0; i < Core::Hardware::NUM_CPU_CORES; i++) {
+            m_arm_interfaces[i] = std::make_unique<Core::ArmHypervisor>(kernel.System(), this, i);
+        }
+        LOG_INFO(Kernel, "Running the application natively through Hypervisor.framework");
+        return;
+    }
+#endif
 
 #ifdef HAS_NCE
     if (this->IsApplication() && Settings::IsNceEnabled()) {

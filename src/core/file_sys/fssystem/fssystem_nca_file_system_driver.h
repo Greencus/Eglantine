@@ -107,6 +107,7 @@ public:
     VirtualFile GetDecryptedBodyStorage() const {
         return m_body_storage ? m_body_storage->GetDecryptedView() : nullptr;
     }
+    VirtualFile GetStorage() const { return m_body_storage; }
     u32 GetMagic() const;
     NcaHeader::DistributionType GetDistributionType() const;
     NcaHeader::ContentType GetContentType() const;

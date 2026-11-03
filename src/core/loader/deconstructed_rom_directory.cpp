@@ -143,6 +143,7 @@ std::vector<FileSys::VirtualDir> FindSidecarDirs(const FileSys::VirtualDir& exef
                });
     };
 
+
     std::vector<FileSys::VirtualDir> dirs{exefs_dir};
     for (auto dir = exefs_dir; dirs.size() < 4;) {
         const auto parent = dir->GetParentDirectory();

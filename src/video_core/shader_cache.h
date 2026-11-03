@@ -85,7 +85,8 @@ protected:
         }
     };
 
-    explicit ShaderCache(Tegra::MaxwellDeviceMemoryManager& device_memory);
+    explicit ShaderCache(Tegra::MaxwellDeviceMemoryManager& device_memory,
+                         bool native_tensor_full_by_default_ = false);
 
     /// @brief Update the hashes and information of shader stages
     /// @param unique_hashes Shader hashes to store into when a stage is enabled
@@ -109,6 +110,8 @@ protected:
     void SetCooperativeMatrixSupported(bool value) {
         support_cooperative_matrix = value;
     }
+
+    bool native_tensor_full_by_default = false;
 
 private:
     /// @brief Tries to obtain a cached shader starting in a given address

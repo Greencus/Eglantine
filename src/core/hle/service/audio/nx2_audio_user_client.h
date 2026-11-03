@@ -31,6 +31,8 @@ public:
     }
 
 private:
+    // nn::audio::OpenAudioOut keeps the command 1 object as a singleton and calls its method 3
+    // (OpenAudioOutAuto: 48 kHz stereo parameters, device name in/out buffers).
     void GetAudioOutManager(HLERequestContext& ctx) {
         LOG_DEBUG(Service_Audio, "Returning IAudioOutManager");
         IPC::ResponseBuilder rb{ctx, 2, 0, 1};

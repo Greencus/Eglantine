@@ -34,6 +34,7 @@
 #include "shader_recompiler/frontend/ampere/program_address_map.h"
 #include "video_core/engines/kepler_compute.h"
 #include "video_core/memory_manager.h"
+#include "video_core/renderer_vulkan/pipeline_stats.h"
 #include "video_core/shader_environment.h"
 #include "video_core/texture_cache/format_lookup_table.h"
 #include "video_core/textures/texture.h"
@@ -130,9 +131,11 @@ static void DumpImpl(u64 /*pipeline_hash*/, u64 shader_hash, std::span<const u64
 }
 
 GenericEnvironment::GenericEnvironment(Tegra::MemoryManager& gpu_memory_, GPUVAddr program_base_,
-                                       u32 start_address_, bool support_cooperative_matrix_)
+                                       u32 start_address_, bool support_cooperative_matrix_,
+                                       bool native_tensor_full_by_default_)
     : gpu_memory{&gpu_memory_}, program_base{program_base_},
-      support_cooperative_matrix{support_cooperative_matrix_} {
+      support_cooperative_matrix{support_cooperative_matrix_},
+      native_tensor_full_by_default{native_tensor_full_by_default_} {
     start_address = start_address_;
 }
 
@@ -441,7 +444,11 @@ std::shared_ptr<const LoweredNativeCode> GenericEnvironment::LowerNativeCode(u32
         }
         if (status == Shader::Ampere::ProgramCaptureState::Result::Complete) break;
     }
-    auto lowered = Shader::Ampere::LowerToMaxwell(native, stage == Shader::Stage::Geometry,
+    const char* const tensor_override = std::getenv("EDEN_NX2_TENSOR");
+    const std::string_view tensor_mode =
+        tensor_override ? tensor_override : (native_tensor_full_by_default ? "full" : "");
+    auto lowered = Shader::Ampere::LowerToMaxwell(native, tensor_mode,
+                                                  stage == Shader::Stage::Geometry,
                                                   support_cooperative_matrix &&
                                                       stage == Shader::Stage::Compute);
     // EDEN_NX2_REJECT=<hex address>,...: treat these programs as rejected (to find which newly
@@ -578,8 +585,10 @@ GraphicsEnvironment::GraphicsEnvironment(Tegra::Engines::Maxwell3D& maxwell3d_,
                                          Maxwell::ShaderType program, GPUVAddr program_base_,
                                          u32 start_address_,
                                          std::shared_ptr<const LoweredNativeCode> lowered_native_,
-                                         bool support_cooperative_matrix_)
-    : GenericEnvironment{gpu_memory_, program_base_, start_address_, support_cooperative_matrix_},
+                                         bool support_cooperative_matrix_,
+                                         bool native_tensor_full_by_default_)
+    : GenericEnvironment{gpu_memory_, program_base_, start_address_, support_cooperative_matrix_,
+                         native_tensor_full_by_default_},
       maxwell3d{&maxwell3d_} {
     gpu_memory->ReadBlock(program_base + start_address, &sph, sizeof(sph));
     initial_offset = sizeof(sph);
@@ -858,10 +867,11 @@ ComputeEnvironment::ComputeEnvironment(Tegra::Engines::KeplerCompute& kepler_com
                                        Tegra::MemoryManager& gpu_memory_, GPUVAddr program_base_,
                                        u32 start_address_,
                                        std::shared_ptr<const LoweredNativeCode> lowered_native_,
-                                       bool support_cooperative_matrix_)
-    : GenericEnvironment{gpu_memory_, program_base_, start_address_, support_cooperative_matrix_},
-      kepler_compute{
-                                                                      &kepler_compute_} {
+                                       bool support_cooperative_matrix_,
+                                       bool native_tensor_full_by_default_)
+    : GenericEnvironment{gpu_memory_, program_base_, start_address_, support_cooperative_matrix_,
+                         native_tensor_full_by_default_},
+      kepler_compute{&kepler_compute_} {
     const auto& qmd{kepler_compute->launch_description};
     stage = Shader::Stage::Compute;
     local_memory_size = qmd.local_pos_alloc + qmd.local_crs_alloc;

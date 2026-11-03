@@ -410,6 +410,7 @@ public:
         return sparse_layers.bound_bytes;
     }
 
+
     bool IsRescaled() const noexcept;
 
     bool ScaleUp(bool ignore = false);
@@ -503,6 +504,7 @@ private:
 
     /// Reads the image's sparse requirements; false when it can't be bound by sparse block.
     bool InitSparseTiles();
+
 
     vk::Image original_image;
     vk::Image scaled_image;

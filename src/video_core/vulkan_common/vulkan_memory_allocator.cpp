@@ -283,7 +283,8 @@ vk::Image MemoryAllocator::CreateImage(const VkImageCreateInfo &ci, bool dedicat
 }
 
 vk::Image MemoryAllocator::CreateUnbackedImage(const VkImageCreateInfo &ci) const {
-    if (!device.CanUseUnbackedSparseImages() || ci.samples != VK_SAMPLE_COUNT_1_BIT ||
+    if (ci.imageType == VK_IMAGE_TYPE_1D || !device.CanUseUnbackedSparseImages() ||
+        ci.samples != VK_SAMPLE_COUNT_1_BIT ||
         !device.IsSparseResidencyImageSupported(ci.imageType)) {
         return vk::Image{};
     }

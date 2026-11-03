@@ -176,6 +176,7 @@ class TextureCache : public VideoCommon::ChannelSetupCaches<TextureCacheChannelI
 
     void PrepareSparseTilesForWrite(Image& image);
 
+
     /// Uploads the image's dirty layers. False when it needs a full upload instead.
     bool UploadWrittenLayers(Image& image);
 
@@ -184,6 +185,7 @@ class TextureCache : public VideoCommon::ChannelSetupCaches<TextureCacheChannelI
 
     /// Image::BindLayers, with the memory it binds counted in total_used_memory.
     std::vector<u32> BindSparseLayers(Image& image, std::span<const u32> layers);
+
 
     /// Uploads `layers` of the image from guest memory.
     void UploadLayers(Image& image, std::span<const u32> layers);
@@ -458,6 +460,7 @@ private:
     bool RefreshPartialContents(Image& image);
 
     bool ReplaceUnwrittenSparse(ImageId image_id);
+
 
     /// Delete image from the cache
     void DeleteImage(ImageId image, bool immediate_delete = false);

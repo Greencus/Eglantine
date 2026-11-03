@@ -4177,9 +4177,7 @@ void MainWindow::OnApplicationChanged(u64 program_id) {
 void MainWindow::UpdateWindowTitle(std::string_view title_name, std::string_view title_version,
                                    std::string_view gpu_vendor) {
     static const std::string build_id = std::string{Common::g_build_id};
-    static const std::string yuzu_title =
-        fmt::format("{} | {} | {}", std::string{Common::g_build_name},
-                    std::string{Common::g_build_version}, std::string{Common::g_compiler_id});
+    static const std::string yuzu_title = "Eglantine - PokeDinner fork by Franseven";
 
     const auto override_title =
         fmt::format(fmt::runtime(std::string(Common::g_title_bar_format_idle)), build_id);
@@ -4430,6 +4428,9 @@ void MainWindow::OnMouseActivity() {
 
 void MainWindow::OnCheckFirmwareDecryption(bool prompt) {
     if (!ContentManager::AreKeysPresent() && !prompt) {
+        // At startup only log it: loose ExeFS/RomFS dumps (all Switch 2 games so far) need no
+        // keys, and a modal question blocked every unattended launch. Tools > Install Decryption
+        // Keys still installs them.
         LOG_WARNING(Frontend, "Decryption keys are missing: NCA, NSP and XCI games need them");
     } else if (!ContentManager::AreKeysPresent()) {
         const auto res = QtCommon::Frontend::Warning(

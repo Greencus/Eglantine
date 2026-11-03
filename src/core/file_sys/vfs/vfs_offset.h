@@ -45,6 +45,10 @@ public:
         return view ? std::make_shared<OffsetVfsFile>(std::move(view), size, offset) : nullptr;
     }
 
+    bool HasDecryptedSections() const override {
+        return file && file->HasDecryptedSections();
+    }
+
 private:
     std::size_t TrimToFit(std::size_t r_size, std::size_t r_offset) const;
 

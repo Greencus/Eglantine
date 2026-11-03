@@ -257,6 +257,10 @@ public:
         return std::make_shared<BlockNczFile>(name, contents, true);
     }
 
+    // NCZ stores CTR sections decrypted; this file serves them as-is, and NcaFileSystemDriver
+    // skips its AES layers because of this flag.
+    bool HasDecryptedSections() const override { return true; }
+
     std::size_t Read(u8* data, std::size_t len, std::size_t off) const override {
         const u64 nca_size = contents->nca_size;
         if (off >= nca_size) return 0;

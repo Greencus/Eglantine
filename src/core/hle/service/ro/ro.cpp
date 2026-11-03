@@ -360,10 +360,29 @@ public:
                                                     sizeof(header)), RO::ResultInvalidNrr);
             R_UNLESS(header.IsValid(nrr_size), RO::ResultInvalidNrr);
 
-            std::vector<Sha256Hash> hashes(header.GetNumHashes());
+            // Switch 2 NRRs (header byte 6 is 1, for example Welcome Tour's
+            // /.nrr/tcn_Release.nrr) carry a longer signature area, so the hash list offset (+0x10)
+            // and hash count (+0x14) of the body start at 0x4b0 instead of 0x330 (real ro module
+            // 0x3d68-0x3e24).
+            u64 hashes_offset = header.GetHashesOffset();
+            u64 num_hashes = header.GetNumHashes();
+            u8 layout[8]{};
+            process->GetMemory().ReadBlock(nrr_address, layout, sizeof(layout));
+            if (layout[6] == 1) {
+                constexpr u64 LongBodyOffset = 0x4b0;
+                R_UNLESS(nrr_size >= LongBodyOffset + 0x20, RO::ResultInvalidNrr);
+                hashes_offset = process->GetMemory().Read32(nrr_address + LongBodyOffset + 0x10);
+                num_hashes = process->GetMemory().Read32(nrr_address + LongBodyOffset + 0x14);
+                R_UNLESS(hashes_offset <= nrr_size &&
+                             num_hashes <= (nrr_size - hashes_offset) / sizeof(Sha256Hash),
+                         RO::ResultInvalidNrr);
+            }
+
+            std::vector<Sha256Hash> hashes(num_hashes);
             if (!hashes.empty()) {
-                R_UNLESS(process->GetMemory().ReadBlock(nrr_address + header.GetHashesOffset(),
-                                                        hashes.data(), hashes.size() * sizeof(Sha256Hash)),
+                R_UNLESS(process->GetMemory().ReadBlock(nrr_address + hashes_offset,
+                                                        hashes.data(),
+                                                        hashes.size() * sizeof(Sha256Hash)),
                          RO::ResultInvalidNrr);
             }
 
